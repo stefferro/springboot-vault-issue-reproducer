@@ -1,0 +1,35 @@
+services:
+
+  vault:
+    image: hashicorp/vault:1.20
+    command: server -dev -dev-listen-address=0.0.0.0:8200
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root-token
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  # Provisions the secret read by the application at startup.
+  # `docker compose up --wait` (used by Spring Boot) fails when a container exits.
+  vault-provisioner:
+    image: hashicorp/vault:1.20
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: root-token
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - vault kv put secret/my/path secret=my-secret-value && touch /tmp/provisioned && exec sleep infinity
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/provisioned"]
+      interval: 1s
+      timeout: 1s
+      retries: 30

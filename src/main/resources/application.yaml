@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: prefix-vault-reproducer
+  config:
+    # Contextual Vault location with a "prefix" query parameter, exactly as documented in
+    # https://docs.spring.io/spring-cloud-vault/reference/config-data.html#vault.configdata.locations
+    #
+    # Every key read from secret/my/path should be exposed as "foo.<key>".
+    import: vault://secret/my/path?prefix=foo.
+  cloud:
+    vault:
+      uri: http://localhost:8200
+      authentication: TOKEN
+      token: root-token
+
+app:
+  secret: ${foo.secret}
